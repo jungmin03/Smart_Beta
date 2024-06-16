@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
 import yfinance as yf
+from sqlalchemy import create_engine
+import pymysql
+import pandas_datareader.data as web
+
 
 def calculate_monthly_returns(data):
     """
@@ -29,25 +33,59 @@ def calculate_rolling_std(returns, window):
     rolling_std = returns.rolling(window=window).std().dropna()
     return rolling_std
 
+
 # KOSPI 종목 리스트를 가져오는 함수 (예제에서는 파일에서 읽기)
 def get_kospi_tickers():
-    # 실제로는 KRX 웹사이트나 다른 데이터 소스에서 가져올 수 있습니다.
-    # 이 예제에서는 일부 종목만 사용.
-    return ['005930.KS', '000660.KS', '035420.KS']
+    engine = create_engine('mysql+pymysql://root:1234@127.0.0.1:3306/stock_db')
+    con = pymysql.connect(user='root',
+                        passwd='1234',
+                        host='127.0.0.1',
+                        db='stock_db',
+                        charset='utf8')
+    mycursor = con.cursor()
+
+    # 티커리스트 불러오기(기준일이 최대, 즉, 최근일 기준 보통주에 해당하는 ticker_list만 불러온다)
+    kor_ticker_list = pd.read_sql("""
+    select * from kor_ticker
+    where 기준일 = (select max(기준일) from kor_ticker) 
+        and 종목구분 = '보통주';
+    """, con=engine)
+    
+    return kor_ticker_list
+
+get_kospi_tickers()
 
 # 데이터 가져오기
 start_date = '2000-01-01'
 end_date = '2016-12-31'
 tickers = get_kospi_tickers()
+tickers
 
 # 결과를 저장할 데이터프레임 초기화
 all_rolling_stds_arithmetic = pd.DataFrame()
 all_rolling_stds_geometric = pd.DataFrame()
 
+
+tickers
+
+tickers_list = tickers.values.tolist()
+tickers_list
+
+
+tickers_list[1]
+
+len(tickers_list)
+
+
+for i in range(len(tickers_list)):
+    test = tickers[i, 0]
+
+
 for ticker in tickers:
     # yfinance에서 데이터 가져오기
-    data = yf.download(ticker, start=start_date, end=end_date)
-    
+    # data = yf.download(ticker, start=start_date, end=end_date)
+    data = web.DataReader(ticker, 'naver')
+
     # 월별 수익률 계산
     monthly_returns = calculate_monthly_returns(data)
     
